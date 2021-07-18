@@ -1,0 +1,90 @@
+---
+title: "svm"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Intro
+
+## 1. Library
+
+```{r, warning=FALSE, message=FALSE}
+library(e1071)
+library(GGally)
+library(ggplot2)
+library(tidyverse)
+library(caret)
+library(readxl)
+library(rsample)
+```
+
+## 2. Exploratory Data Analysis
+
+### 2.1 Load Data
+
+```{r}
+uas_svm <- read_xlsx("data/UAS_SVM.xlsx")
+glimpse(uas_svm)
+```
+
+### 2.2 Cek Missing Data & Tipe Data
+
+```{r}
+colSums(is.na(uas_svm))
+
+uas_svm$`Pelunasan Kredit` <- as.factor(uas_svm$`Pelunasan Kredit`)
+```
+
+## 3. Cross Validation
+
+```{r, warning=FALSE}
+RNGkind(sample.kind = "Rounding")
+set.seed(100)
+splitter <- initial_split(uas_svm, prop = 0.7, strata = "Pelunasan Kredit")
+
+data_train <- training(splitter)
+data_test <- testing(splitter)
+
+test <- data_test %>% 
+  select(-`Pelunasan Kredit`) ## mengeluarkan variabel target
+```
+
+```{r}
+prop.table(table(data_train$`Pelunasan Kredit`))
+prop.table(table(data_test$`Pelunasan Kredit`))
+```
+
+## 4. Membuat SVM Model
+
+```{r}
+svm_model <- svm(`Pelunasan Kredit` ~ ., data = data_train, kernel = "radial")
+```
+
+## 5. Exploratory Visualization
+
+```{r}
+ggpairs(data_train, aes(colour = `Pelunasan Kredit`, alpha = 0.4))
+```
+
+## 6. Prediction
+
+### 6.1 Predict Data Actual
+
+```{r}
+pred = predict(svm_model, uas_svm)
+confusionMatrix(pred, reference = uas_svm$`Pelunasan Kredit`)
+```
+
+**Kesimpulan: ** Dari hasil prediksi didapatkan akurasi pada data actual sebesar **62,66%**
+
+### 6.2 Predict Data Test
+
+```{r}
+pred1 = predict(svm_model, test)
+confusionMatrix(pred1, reference = data_test$`Pelunasan Kredit`)
+```
+
+**Kesimpulan: ** Dari hasil prediksi didapatkan akurasi pada data test yang sudah diseparasi sebesar 30% sebesar **50%**
